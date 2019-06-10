@@ -1,3 +1,6 @@
+import 'dart:math';
+
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:paged_cards/paged_cards.dart';
 
@@ -82,10 +85,11 @@ class _MyHomePageState extends State<MyHomePage> {
       body: ListView.builder(
         itemBuilder: (context, index) {
           return InkWell(
-              child: BookRow(book: books[index]),
-              onTap: () {
-                _showCards(index);
-              });
+            child: BookRow(book: books[index]),
+            onTap: () {
+              _showCards(index);
+            },
+          );
         },
         itemCount: books.length,
       ),
@@ -94,58 +98,17 @@ class _MyHomePageState extends State<MyHomePage> {
 
   void _showCards(int initialPageIndex) {
     Navigator.of(context, rootNavigator: true).push(
-      OverlayRoute(
-        builder: (context) {
-          return Container(
-            child: PagedCards(
-              cardCount: books.length,
-              initialPage: initialPageIndex,
-              builder: (context, index) {
-                return BookDetail(book: books[index]);
-              },
-            ),
-          );
-        },
-        // fullscreenDialog: true,
+      FullscreenOverlayRoute(
+        child: Container(
+          child: PagedCards(
+            cardCount: books.length,
+            initialPage: initialPageIndex,
+            builder: (context, index) {
+              return BookDetail(book: books[index]);
+            },
+          ),
+        ),
       ),
-    );
-  }
-}
-
-class OverlayRoute extends ModalRoute<void> {
-  OverlayRoute({
-    @required this.builder,
-  });
-
-  final WidgetBuilder builder;
-
-  @override
-  Duration get transitionDuration => Duration(milliseconds: 0);
-
-  @override
-  bool get opaque => false;
-
-  @override
-  bool get barrierDismissible => false;
-
-  @override
-  Color get barrierColor => Colors.white.withOpacity(0.75);
-
-  @override
-  String get barrierLabel => null;
-
-  @override
-  bool get maintainState => true;
-
-  @override
-  Widget buildPage(
-    BuildContext context,
-    Animation<double> animation,
-    Animation<double> secondaryAnimation,
-  ) {
-    return Material(
-      type: MaterialType.transparency,
-      child: builder(context),
     );
   }
 }
@@ -191,38 +154,129 @@ class BookDetail extends StatelessWidget {
         title: Text(book.title),
         backgroundColor: Colors.red,
       ),
-      body: Container(
-        color: Color.fromARGB(5, 0, 0, 0),
-        child: ListView.builder(
-          itemCount: 1000,
-          itemBuilder: (context, index) {
-            if (index == 0)
-              return AspectRatio(
-                // width: 80,
-                // height: 80,
-                aspectRatio: 0.75,
-                child: Image.network(
-                  book.url.toString(),
+      body: Navigator(
+        onGenerateRoute: (_) {
+          return MaterialPageRoute(
+            settings: RouteSettings(isInitialRoute: true),
+            builder: (context) {
+              return Container(
+                color: Color.fromARGB(5, 0, 0, 0),
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 10),
+                  child: ListView.builder(
+                    itemCount: 1000,
+                    itemBuilder: (context, index) {
+                      if (index == 0)
+                        return AspectRatio(
+                          aspectRatio: 0.75,
+                          child: Image.network(
+                            book.url.toString(),
+                          ),
+                        );
+
+                      if (index == 1)
+                        return Padding(
+                          padding: const EdgeInsets.all(10.0),
+                          child: Center(
+                            child: Text(book.title,
+                                style: Theme.of(context).textTheme.headline),
+                          ),
+                        );
+
+                      if (index == 2) {
+                        return Text(
+                          'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.' *
+                              2,
+                        );
+                      }
+
+                      return Container(
+                        height: 30,
+                        child: Text('Filler Row #${index - 1}'),
+                      );
+                    },
+                  ),
                 ),
               );
-
-            if (index == 1)
-              return Padding(
-                padding: const EdgeInsets.all(10.0),
-                child: Center(
-                  child: Text(book.title,
-                      style: Theme.of(context).textTheme.headline),
-                ),
-              );
-
-            return Container(
-              height: 30,
-              // color: color,
-              child: Text('Filler Row #${index - 1}'),
-            );
-          },
-        ),
+            },
+          );
+        },
       ),
+    );
+  }
+}
+
+class FullscreenOverlayRoute extends PageRoute<void> {
+  FullscreenOverlayRoute({
+    @required this.child,
+  }) : super(fullscreenDialog: true);
+
+  final Widget child;
+
+  @override
+  Duration get transitionDuration => Duration(milliseconds: 300);
+
+  @override
+  bool get opaque => false;
+
+  @override
+  bool get barrierDismissible => false;
+
+  @override
+  Color get barrierColor => Colors.white.withOpacity(0.75);
+
+  @override
+  String get barrierLabel => null;
+
+  @override
+  bool get maintainState => true;
+
+  @override
+  Widget buildPage(
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+  ) {
+    return Material(
+      type: MaterialType.transparency,
+      child: Stack(
+        children: <Widget>[
+          GestureDetector(
+            child: Container(color: Colors.transparent),
+            onTap: () {
+              Navigator.of(context).pop();
+            },
+          ),
+          child,
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget buildTransitions(
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    final theme = Theme.of(context).pageTransitionsTheme;
+
+    return AnimatedBuilder(
+      animation: animation,
+      child: theme.buildTransitions<void>(
+        this,
+        context,
+        animation,
+        secondaryAnimation,
+        child,
+      ),
+      builder: (context, child) {
+        return Container(
+          color: Colors.black.withOpacity(animation.value * 0.75),
+          child: child,
+        );
+      },
     );
   }
 }
