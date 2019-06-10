@@ -1,5 +1,5 @@
 name: bookstore
-description: A Flutter demo project.
+description: Demo application showcasing Flutter `paged_cards` widget.
 
 # The following defines the version and build number for your application.
 # A version number is three numbers separated by dots, like 1.2.43

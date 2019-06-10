@@ -21,7 +21,7 @@ class MyApp extends StatelessWidget {
         // is not restarted.
         primarySwatch: Colors.blue,
       ),
-      home: MyHomePage(title: ''),
+      home: MyHomePage(title: 'Bookstore'),
     );
   }
 }
@@ -60,6 +60,18 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
+    return SafeArea(
+      child: PagedCards(cards: [
+        null,
+        null,
+        null,
+        null,
+        // CardPage(),
+        // CardPage(),
+        // CardPage(),
+      ]),
+    );
+
     // This method is rerun every time setState is called, for instance as done
     // by the _incrementCounter method above.
     //
@@ -74,6 +86,8 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
       body: PagedCards(
         cards: [
+          null,
+          null,
           null,
           null,
           // CardPage(),
