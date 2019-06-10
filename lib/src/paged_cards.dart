@@ -2,9 +2,14 @@ import 'dart:async';
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:paged_cards/paged_cards.dart';
+
+enum CardType {
+  left,
+  primary,
+  right,
+}
 
 class PagedCards extends StatefulWidget {
   const PagedCards({
@@ -22,11 +27,15 @@ class PagedCards extends StatefulWidget {
   _PagedCardsState createState() => _PagedCardsState();
 }
 
-class _PagedCardsState extends State<PagedCards> {
-  final PageController controller = PageController(
-    // viewportFraction: 0.9,
-    initialPage: 1,
-  );
+class _PagedCardsState extends State<PagedCards> with TickerProviderStateMixin {
+  // Animation<double> _primarySnapAnimation;
+
+  /// -1 (fully dismissed) to 1 (fully snapped)
+  AnimationController _primarySnapAnimationController;
+  // Animation<double> _primaryDismissAnimation;
+  // AnimationController _primaryDismissAnimationController;
+
+  int _primaryPageIndex = 1;
 
   /// The vertical progress of the primary, centered card.
   /// Ranges from 0 (show smaller inline) to 1 (taking up the whole screen unscaled).
@@ -41,21 +50,12 @@ class _PagedCardsState extends State<PagedCards> {
   initState() {
     super.initState();
 
-    controller.addListener(() {
-      final currentPage = controller.hasClients &&
-              // Enable workaround for a crasher on first render
-              controller.position?.minScrollExtent != null
-          ? controller.page.round()
-          : null;
-
-      if (currentPage != null && currentPage != _activePage) {
-        setState(() {
-          _activePage = currentPage;
-          _currentCardOffset = 0;
-          print('new active page = ${currentPage}');
-        });
-      }
-    });
+    _primarySnapAnimationController = new AnimationController(
+      vsync: this,
+      value: 0,
+      lowerBound: -1,
+      upperBound: 1,
+    );
 
     Timer.periodic(Duration(milliseconds: 36), (d) {
       setState(() {
@@ -64,15 +64,12 @@ class _PagedCardsState extends State<PagedCards> {
     });
   }
 
-  int _activePage = 0;
-  int _currentCardOffset = 0;
-
   Widget _renderCard(
     BuildContext context, {
     int currentIndex,
-    int centeredIndex,
+    type: CardType,
   }) {
-    final isCenteredCard = currentIndex == centeredIndex;
+    final isCenteredCard = type == CardType.primary;
     final containerWidth = MediaQuery.of(context).size.width;
     final containerHeight = MediaQuery.of(context).size.height;
     final centeredCardWidthAfterScale = containerWidth *
@@ -88,17 +85,19 @@ class _PagedCardsState extends State<PagedCards> {
 
     // print('singleSideLeftOver = $singleSideLeftOver');
 
-    double left = isCenteredCard
-        ? 0
-        : (currentIndex < centeredIndex
-            ? (-containerWidth +
-                singleSideLeftOver +
-                singleSideLeftOver *
-                    (0.5 - _centerCardProgress * _centerCardProgress))
-            : containerWidth -
-                singleSideLeftOver -
-                singleSideLeftOver *
-                    (0.5 - _centerCardProgress * _centerCardProgress));
+    // double left = isCenteredCard
+    //     ? 0
+    //     : (currentIndex < centeredIndex
+    //         ? (-containerWidth +
+    //             singleSideLeftOver +
+    //             singleSideLeftOver *
+    //                 (0.5 - _centerCardProgress * _centerCardProgress))
+    //         : containerWidth -
+    //             singleSideLeftOver -
+    //             singleSideLeftOver *
+    //                 (0.5 - _centerCardProgress * _centerCardProgress));
+
+    var left = 0.0;
 
     //  (singleSideLeftOver / 4 +
     //     (currentIndex - centeredIndex) * centeredCardWidthAfterScale);
@@ -123,88 +122,159 @@ class _PagedCardsState extends State<PagedCards> {
     //   //     reportOffset(-x.globalPosition.dy + 50);
     //   //   },
     //   child:
-    return Container(
-      // color: Colors.red,
-      child: Transform.scale(
-        // scale: 0.8,
-        scale: 0.9 +
-            (isCenteredCard
-                ? (0.1 * _centerCardProgress * _centerCardProgress)
-                : 0),
-        // origin: Offset(-1, 0),
-        child: GestureDetector(
-          dragStartBehavior: DragStartBehavior.down,
-          onVerticalDragDown: isCenteredCard
-              ? (details) {
-                  //     print('pan down');
-                  _panDownY = details.globalPosition.dy;
-                }
-              : null,
-          onVerticalDragUpdate: isCenteredCard
-              ? (x) {
-                  final safeAreaTop = MediaQuery.of(context).padding.top;
-                  // final top2 = MediaQuery.of(context).viewInsets.top;
 
-                  print('safeAreaTop = $safeAreaTop, _panDownY = $_panDownY ');
+// TODO:
 
-                  //  + safeAreaTop
+    final childCard = CardPage(
+      color: currentIndex % 2 == 0 ? Colors.red : Colors.blue,
+      isPrimaryCard: isCenteredCard,
+      onScroll: (offset) {
+        setState(() {
+          // _currentCardOffset = offset;
+          // print('_currentCardOffset = $_currentCardOffset');
+        });
+      },
+      builder: (context) => widget.builder(context, currentIndex),
+      // current
+    );
 
-                  if (x.globalPosition.dy > _panDownY) {
-                    final dYInDismissDirection =
-                        x.globalPosition.dy - _panDownY;
-                    setState(() {
-                      _centerCardProgress = 0;
-                      _dismissProgress =
-                          (dYInDismissDirection / 200).clamp(0.0, 1.0);
+    return AnimatedBuilder(
+      key: Key('$currentIndex'),
+      animation: _primarySnapAnimationController,
+      child: childCard,
+      builder: (context, child) {
+        // print('rendering with value ${_primarySnapAnimationController.value}');
+
+        final animationValue = _primarySnapAnimationController.value;
+
+        final primaryCardSnapProgress = animationValue > 0 ? animationValue : 0;
+        final neighborCardPaddingFactor = (1 -
+            primaryCardSnapProgress *
+                primaryCardSnapProgress *
+                primaryCardSnapProgress);
+
+        return Opacity(
+          opacity: animationValue < 0 ? animationValue + 1 : 1,
+          child: Transform.translate(
+            offset: isCenteredCard
+                ? Offset(
+                    0,
+                    animationValue < 0 ? animationValue * -containerHeight : 0,
+                  )
+                : type == CardType.left
+                    ? Offset(
+                        -containerWidth + 30 * neighborCardPaddingFactor,
+                        0,
+                      )
+                    : Offset(
+                        containerWidth - 30 * neighborCardPaddingFactor,
+                        0,
+                      ),
+            child: Transform.scale(
+              // scale: 0.8,
+              scale: 0.9 +
+                  (isCenteredCard
+                      ? (0.1 * (1 - neighborCardPaddingFactor))
+                      : 0),
+              // origin: Offset(-1, 0),
+              child: GestureDetector(
+                dragStartBehavior: DragStartBehavior.down,
+                onVerticalDragDown: isCenteredCard
+                    ? (details) {
+                        //     print('pan down');
+                        _panDownY = details.globalPosition.dy;
+                      }
+                    : null,
+                onHorizontalDragUpdate: (_) {
+                  print('horizontal drag!'); // TODO
+                },
+                onVerticalDragUpdate: isCenteredCard
+                    ? (x) {
+                        final safeAreaTop = MediaQuery.of(context).padding.top;
+                        final height = MediaQuery.of(context).size.height;
+                        // final top2 = MediaQuery.of(context).viewInsets.top;
+
+                        print(
+                            'safeAreaTop = $safeAreaTop, _panDownY = $_panDownY ');
+
+                        //  + safeAreaTop
+
+                        if (x.globalPosition.dy > _panDownY) {
+                          final dYInDismissDirection =
+                              x.globalPosition.dy - _panDownY;
+                          // setState(() {
+                          // });
+
+                          // _primarySnapAnimationController.value = 0;
+                          _primarySnapAnimationController.value =
+                              -(dYInDismissDirection / (height - safeAreaTop))
+                                  .clamp(0.0, 1.0);
+
+                          // _centerCardProgress = 0;
+                          // _dismissProgress =
+
+                        } else {
+                          final dYInSnapDirection =
+                              _panDownY - x.globalPosition.dy;
+                          final totalDistanceTilSnap = _panDownY - safeAreaTop;
+
+                          print(
+                            'dYInDirection = $dYInSnapDirection, totalDistanceTilSnap = $totalDistanceTilSnap',
+                          );
+
+                          _primarySnapAnimationController.value =
+                              (dYInSnapDirection / totalDistanceTilSnap)
+                                  .clamp(0.0, 1.0);
+                        }
+
+                        // final p = (_panDownY - x.globalPosition.dy).clamp(0, 0);
+                        // print('pan move ${p}');
+
+                        // print('pan mov 1e ${}');
+
+                        //     reportOffset(-x.globalPosition.dy + 50);
+                      }
+                    : null,
+                onVerticalDragEnd: (details) {
+                  final animationValue = _primarySnapAnimationController.value;
+                  print(
+                    'END = ${details.primaryVelocity}, animationValue = $animationValue',
+                  );
+
+                  /* TODO: take velocity into account */
+                  if (animationValue > 0.5) {
+                    _primarySnapAnimationController.animateTo(
+                      1,
+                      duration: Duration(milliseconds: 200),
+                    );
+                  } else if (animationValue < -0.5) {
+                    _primarySnapAnimationController
+                        .animateTo(
+                      -1,
+                      duration: Duration(milliseconds: 200),
+                    )
+                        .then((_) {
+                      Navigator.of(context).pop();
                     });
                   } else {
-                    final dYInSnapDirection = _panDownY - x.globalPosition.dy;
-                    final totalDistanceTilSnap = _panDownY - safeAreaTop;
-
-                    print(
-                      'dYInDirection = $dYInSnapDirection, totalDistanceTilSnap = $totalDistanceTilSnap',
+                    _primarySnapAnimationController.animateTo(
+                      0,
+                      duration: Duration(milliseconds: 200),
                     );
-
-                    setState(() {
-                      _dismissProgress = 0;
-                      _centerCardProgress =
-                          (dYInSnapDirection / totalDistanceTilSnap)
-                              .clamp(0.0, 1.0);
-                    });
                   }
 
-                  // final p = (_panDownY - x.globalPosition.dy).clamp(0, 0);
-                  // print('pan move ${p}');
+                  // if (details.primaryVelocity > 0) {
+                  //   // downwards
 
-                  // print('pan mov 1e ${}');
-
-                  //     reportOffset(-x.globalPosition.dy + 50);
-                }
-              : null,
-          onVerticalDragEnd: (details) {
-            print('END = ${details.primaryVelocity}');
-
-            if (details.primaryVelocity > 0) {
-              // downwards
-
-              Navigator.of(context).pop();
-            }
-          },
-          child: CardPage(
-            color: currentIndex % 2 == 0 ? Colors.red : Colors.blue,
-            isPrimaryCard: isCenteredCard,
-            onScroll: (offset) {
-              setState(() {
-                _currentCardOffset = offset;
-                print('_currentCardOffset = $_currentCardOffset');
-              });
-            },
-            builder: (context) => widget.builder(context, currentIndex),
-            // current
+                  // }
+                },
+                child: child,
+              ),
+              // ),
+            ),
           ),
-        ),
-        // ),
-      ),
+        );
+      },
     );
   }
 
@@ -253,70 +323,69 @@ class _PagedCardsState extends State<PagedCards> {
     //   cacheExtent: 1,
     // );
 
-    return CustomScrollView(
-      scrollDirection: Axis.horizontal,
-      controller: controller,
-      physics: PageScrollPhysics(),
-       cacheExtent: 1000,
-      slivers: <Widget>[
+    // return CustomScrollView(
+    //   scrollDirection: Axis.horizontal,
+    //   controller: controller,
+    //   physics: PageScrollPhysics(),
+    //   cacheExtent: 1000,
+    //   slivers: <Widget>[
+    //     SliverList(
+    //       delegate: SliverChildBuilderDelegate(
+    //         (context, index) {
+    //           print('BUILDING $index');
 
-        SliverList(
-          delegate: SliverChildBuilderDelegate(
-            (context, index) {
-              print('BUILDING $index');
+    //           final scaleFactor = index == 1
+    //               ? (0.9 + 0.1 * _centerCardProgress * _centerCardProgress)
+    //               : 0.9;
 
-              final scaleFactor = index == 1
-                  ? (0.9 + 0.1 * _centerCardProgress * _centerCardProgress)
-                  : 0.9;
+    //           return Transform.translate(
+    //             // offset: Offset(0, 0),
+    //             offset: index == 0
+    //                 ? Offset(100, 0)
+    //                 : (index == 2 ? Offset(-100, 0) : Offset(0, 0)),
+    //             child: Container(
+    //               // color: index % 2 == 0 ? Colors.yellow : Colors.lightBlue,
+    //               width: containerWidth - 0.5,
+    //               child: Transform.scale(
+    //                 scale: scaleFactor,
+    //                 child: Container(
+    //                   color:
+    //                       index % 2 == 0 ? Colors.yellow : Colors.transparent,
+    //                   width: containerWidth, // * 0.9,
+    //                   // _renderCard(context, currentIndex: 0, centeredIndex: selectedIndex),
+    //                   height: 10,
+    //                   child: _renderCard(
+    //                     context,
+    //                     currentIndex: index,
+    //                     centeredIndex: selectedIndex,
+    //                   ),
+    //                 ),
+    //               ),
+    //             ),
+    //           );
+    //         },
+    //         childCount: 10,
+    //       ),
+    //     ),
+    //   ],
+    // );
 
-              return Transform.translate(
-                // offset: Offset(0, 0),
-                offset: index == 0
-                    ? Offset(100, 0)
-                    : (index == 2 ? Offset(-100, 0) : Offset(0, 0)),
-                child: Container(
-                  // color: index % 2 == 0 ? Colors.yellow : Colors.lightBlue,
-                  width: containerWidth - 0.5,
-                  child: Transform.scale(
-                    scale: scaleFactor,
-                    child: Container(
-                      color:
-                          index % 2 == 0 ? Colors.yellow : Colors.transparent,
-                      width: containerWidth, // * 0.9,
-                      // _renderCard(context, currentIndex: 0, centeredIndex: selectedIndex),
-                      height: 10,
-                      child: _renderCard(
-                        context,
-                        currentIndex: index,
-                        centeredIndex: selectedIndex,
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            },
-            childCount: 10,
-          ),
-        ),
-      ],
-    );
+    // return Scrollable(
+    //   // dragStartBehavior: DragStartBehavior.down,
+    //   axisDirection: AxisDirection.right,
+    //   controller: controller,
+    //   physics: PageScrollPhysics(),
+    //   viewportBuilder: (BuildContext context, ViewportOffset position) {
+    //     position.addListener(() {
+    //       print('position changed, ${position.pixels}');
+    //     });
 
-    return Scrollable(
-      // dragStartBehavior: DragStartBehavior.down,
-      axisDirection: AxisDirection.right,
-      controller: controller,
-      physics: PageScrollPhysics(),
-      viewportBuilder: (BuildContext context, ViewportOffset position) {
-        position.addListener(() {
-          print('position changed, ${position.pixels}');
-        });
-
-        return Container(
-          color: Colors.red,
-          child: Text('${position.pixels}'),
-        );
-      },
-    );
+    //     return Container(
+    //       color: Colors.red,
+    //       child: Text('${position.pixels}'),
+    //     );
+    //   },
+    // );
 
     // SingleChildScrollView
     // ListView
@@ -351,9 +420,29 @@ class _PagedCardsState extends State<PagedCards> {
       //   },
       //   itemCount: 2, // widget.cards.length,
       // ),
-      _renderCard(context, currentIndex: 0, centeredIndex: selectedIndex),
-      _renderCard(context, currentIndex: 2, centeredIndex: selectedIndex),
-      _renderCard(context, currentIndex: 1, centeredIndex: selectedIndex),
+      if (_primaryPageIndex > 0)
+        _renderCard(
+          context,
+          currentIndex: _primaryPageIndex - 1,
+          type: CardType.left,
+          // centeredIndex: selectedIndex,
+        ),
+
+      if (_primaryPageIndex < widget.cardCount)
+        _renderCard(
+          context,
+          currentIndex: _primaryPageIndex + 1,
+          type: CardType.right,
+          // centeredIndex: selectedIndex,
+        ),
+
+      // primary card on top
+      _renderCard(
+        context,
+        currentIndex: _primaryPageIndex,
+        type: CardType.primary,
+        // centeredIndex: selectedIndex,
+      ),
 
       // Positioned(
       //   top: 50,
@@ -452,6 +541,9 @@ class _PagedCardsState extends State<PagedCards> {
   void dispose() {
     super.dispose();
 
-    controller.dispose();
+    // _primaryDismissAnimationController.dispose();
+    _primarySnapAnimationController.dispose();
+
+    // controller.dispose();
   }
 }
