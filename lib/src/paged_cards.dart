@@ -152,6 +152,8 @@ class _PagedCardsState extends State<PagedCards> with TickerProviderStateMixin {
             primaryCardSnapProgress *
                 primaryCardSnapProgress *
                 primaryCardSnapProgress);
+        final dismissDistance =
+            animationValue < 0 ? animationValue * -containerHeight : 0.0;
 
         return Opacity(
           opacity: animationValue < 0 ? animationValue + 1 : 1,
@@ -159,16 +161,16 @@ class _PagedCardsState extends State<PagedCards> with TickerProviderStateMixin {
             offset: isCenteredCard
                 ? Offset(
                     0,
-                    animationValue < 0 ? animationValue * -containerHeight : 0,
+                    dismissDistance,
                   )
                 : type == CardType.left
                     ? Offset(
                         -containerWidth + 30 * neighborCardPaddingFactor,
-                        0,
+                        dismissDistance,
                       )
                     : Offset(
                         containerWidth - 30 * neighborCardPaddingFactor,
-                        0,
+                        dismissDistance,
                       ),
             child: Transform.scale(
               // scale: 0.8,

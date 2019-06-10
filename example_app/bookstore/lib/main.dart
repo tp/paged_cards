@@ -71,34 +71,75 @@ class _MyHomePageState extends State<MyHomePage> {
 
   void _showCards() {
     Navigator.of(context, rootNavigator: true).push(
-      MaterialPageRoute(
+      OverlayRoute(
         builder: (context) {
-          return PagedCards(
-            cardCount: 4,
-            builder: (context, index) {
-              final color = index % 2 == 0 ? Colors.red : Colors.blue;
+          return Container(
+            child: PagedCards(
+              cardCount: 4,
+              builder: (context, index) {
+                final color = index % 2 == 0 ? Colors.red : Colors.blue;
 
-              return Scaffold(
-                appBar: AppBar(
-                  title: Text('Card $index'),
-                  backgroundColor: Colors.green,
-                ),
-                body: ListView.builder(
-                  itemCount: 1000,
-                  itemBuilder: (context, index) {
-                    return Container(
-                      height: 30,
-                      color: color,
-                      child: Text('$index'),
-                    );
-                  },
-                ),
-              );
-            },
+                return Scaffold(
+                  appBar: AppBar(
+                    title: Text('Card $index'),
+                    backgroundColor: Colors.green,
+                  ),
+                  body: ListView.builder(
+                    itemCount: 1000,
+                    itemBuilder: (context, index) {
+                      return Container(
+                        height: 30,
+                        color: color,
+                        child: Text('$index'),
+                      );
+                    },
+                  ),
+                );
+              },
+            ),
           );
         },
-        fullscreenDialog: true,
+        // fullscreenDialog: true,
       ),
+    );
+  }
+}
+
+class OverlayRoute extends ModalRoute<void> {
+  OverlayRoute({
+    @required this.builder,
+  });
+
+  final WidgetBuilder builder;
+
+  @override
+  Duration get transitionDuration => Duration(milliseconds: 0);
+
+  @override
+  bool get opaque => false;
+
+  @override
+  bool get barrierDismissible => false;
+
+  @override
+  Color get barrierColor => Colors.white.withOpacity(0.75);
+
+  @override
+  String get barrierLabel => null;
+
+  @override
+  bool get maintainState => true;
+
+  @override
+  Widget buildPage(
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+  ) {
+    // return builder(context);
+    return Material(
+      type: MaterialType.transparency,
+      child: builder(context),
     );
   }
 }
