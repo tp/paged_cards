@@ -66,20 +66,40 @@ class _PagedCardsState extends State<PagedCards> {
   }) {
     final isCenteredCard = currentIndex == centeredIndex;
     final containerWidth = MediaQuery.of(context).size.width;
-    final centeredCardWidth = containerWidth *
+    final centeredCardWidthAfterScale = containerWidth *
         (0.9 + 0.1 * _centerCardProgress * _centerCardProgress);
 
     // positions
     double top = isCenteredCard ? 50 * (1 - _centerCardProgress) : 50;
 
-    double singleSideLeftOver = (containerWidth - centeredCardWidth) / 2;
-    double left =
-        singleSideLeftOver + (currentIndex - centeredIndex) * centeredCardWidth;
+    double singleSideLeftOver =
+        (containerWidth - centeredCardWidthAfterScale) / 2;
+
+    // print('singleSideLeftOver = $singleSideLeftOver');
+
+    double left = isCenteredCard
+        ? 0
+        : (currentIndex < centeredIndex
+            ? (-containerWidth +
+                singleSideLeftOver +
+                singleSideLeftOver *
+                    (0.5 - _centerCardProgress * _centerCardProgress))
+            : containerWidth -
+                singleSideLeftOver -
+                singleSideLeftOver *
+                    (0.5 - _centerCardProgress * _centerCardProgress));
+
+    //  (singleSideLeftOver / 4 +
+    //     (currentIndex - centeredIndex) * centeredCardWidthAfterScale);
+
+    // print(
+    //   'index = $currentIndex, left = $left, containerWidth = $containerWidth',
+    // );
 
     return Positioned(
       top: top,
       left: left,
-      width: MediaQuery.of(context).size.width,
+      width: containerWidth,
       height: MediaQuery.of(context).size.height,
       // /   onPanDown: (_) {
       //     print('pan down');
@@ -89,35 +109,40 @@ class _PagedCardsState extends State<PagedCards> {
 
       //     reportOffset(-x.globalPosition.dy + 50);
       //   },
-      child: Transform.scale(
-        scale: 0.9 +
-            (isCenteredCard
-                ? (0.1 * _centerCardProgress * _centerCardProgress)
-                : 0),
-        child: GestureDetector(
-          onPanDown: isCenteredCard
-              ? (_) {
-                  //     print('pan down');
-                }
-              : null,
-          onPanUpdate: isCenteredCard
-              ? (x) {
-                  //     print('pan move ${-x.globalPosition.dy + 50}');
+      child: Container(
+        // color: Colors.red,
+        child: Transform.scale(
+          // scale: 0.8,
+          scale: 0.9 +
+              (isCenteredCard
+                  ? (0.1 * _centerCardProgress * _centerCardProgress)
+                  : 0),
+          // origin: Offset(-1, 0),
+          child: GestureDetector(
+            onPanDown: isCenteredCard
+                ? (_) {
+                    //     print('pan down');
+                  }
+                : null,
+            onPanUpdate: isCenteredCard
+                ? (x) {
+                    print('pan move ${-x.globalPosition.dy + 50}');
 
-                  //     reportOffset(-x.globalPosition.dy + 50);
-                }
-              : null,
-          child: CardPage(
-            color: 1 % 2 == 0 ? Colors.red : Colors.blue,
-            isPrimaryCard: isCenteredCard,
-            onScroll: (offset) {
-              setState(() {
-                _currentCardOffset = offset;
-                print('_currentCardOffset = $_currentCardOffset');
-              });
-            },
-            builder: (context) => widget.builder(context, 1),
-            // current
+                    //     reportOffset(-x.globalPosition.dy + 50);
+                  }
+                : null,
+            child: CardPage(
+              color: currentIndex % 2 == 0 ? Colors.red : Colors.blue,
+              isPrimaryCard: isCenteredCard,
+              onScroll: (offset) {
+                setState(() {
+                  _currentCardOffset = offset;
+                  print('_currentCardOffset = $_currentCardOffset');
+                });
+              },
+              builder: (context) => widget.builder(context, currentIndex),
+              // current
+            ),
           ),
         ),
       ),
@@ -132,8 +157,9 @@ class _PagedCardsState extends State<PagedCards> {
 
     return Stack(children: [
       _renderCard(context, currentIndex: 0, centeredIndex: selectedIndex),
-      _renderCard(context, currentIndex: 1, centeredIndex: selectedIndex),
       _renderCard(context, currentIndex: 2, centeredIndex: selectedIndex),
+      _renderCard(context, currentIndex: 1, centeredIndex: selectedIndex),
+
       // Positioned(
       //   top: 50,
       //   left: -(MediaQuery.of(context).size.width - 100) + 40,
