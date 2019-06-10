@@ -4,10 +4,15 @@ import 'package:flutter/widgets.dart';
 class CardPage extends StatefulWidget {
   const CardPage({
     Key key,
+    @required this.builder,
     @required this.color,
     @required this.isPrimaryCard,
     this.onScroll,
-  }) : super(key: key);
+  })  : assert(builder != null),
+        assert(isPrimaryCard != null),
+        super(key: key);
+
+  final WidgetBuilder builder;
 
   final Color color;
 
@@ -77,57 +82,41 @@ class _CardPageState extends State<CardPage> {
 //       child: Container(
 //         height: 1000,
 //         child:
-    return GestureDetector(
-      onPanDown: (_) {
-        print('pan down');
-      },
-      onPanUpdate: (x) {
-        print('pan move ${-x.globalPosition.dy + 50}');
+    return
+        // GestureDetector(
+        //   onPanDown: (_) {
+        //     print('pan down');
+        //   },
+        //   onPanUpdate: (x) {
+        //     print('pan move ${-x.globalPosition.dy + 50}');
 
-        reportOffset(-x.globalPosition.dy + 50);
-      },
-      child: Padding(
-        padding: EdgeInsets.only(
-          top: 20,
-          left: 10 * (1 - progress),
-          right: 10 * (1 - progress),
-          bottom: 20,
+        //     reportOffset(-x.globalPosition.dy + 50);
+        //   },
+        //   child:
+        //  Padding(
+        //   padding: EdgeInsets.only(
+        //     top: 0,
+        //     left: 10 * (1 - progress),
+        //     right: 10 * (1 - progress),
+        //     bottom: 20,
+        //   ),
+        //   child:
+        Container(
+      child: ClipRRect(
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(
+            10 * (1 - progress),
+          ),
+          topRight: Radius.circular(
+            10 * (1 - progress),
+          ),
         ),
-        child: ClipRRect(
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(
-                10 * (1 - progress),
-              ),
-              topRight: Radius.circular(
-                10 * (1 - progress),
-              ),
-            ),
-            // This is just the child that'd be passed by the outside
-            child: Scaffold(
-                appBar: AppBar(
-                  title: Text('Card'),
-                ),
-                body: ListView.builder(
-                  itemCount: 1000,
-                  itemBuilder: (context, index) {
-                    // print('index $index');
-                    return Container(
-                      height: 30,
-                      color: widget.color,
-                      child: Text('$index'),
-                    );
-                  },
-                )
-
-                //  Container(
-                //   // width: 100,
-                //   // height: 100,
-
-                // ),
-                )),
-        // ),
-        // ),
+        child: widget.builder(context),
       ),
+      // ),
+      // ),
+      // ),
+      // ),
     );
   }
 
