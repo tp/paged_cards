@@ -3,22 +3,47 @@ import 'package:paged_cards/paged_cards.dart';
 
 void main() => runApp(MyApp());
 
+class Book {
+  Book(this.title, this.url);
+
+  final String title;
+  final Uri url;
+}
+
+final books = [
+  Book(
+    'Alice\'s Adventures',
+    Uri.parse(
+        'https://upload.wikimedia.org/wikipedia/en/7/72/Alicesadventuresinwonderland1898.jpg'),
+  ),
+  Book(
+    'The Count of Monte Cristo',
+    Uri.parse(
+        'https://upload.wikimedia.org/wikipedia/commons/d/d6/Louis_Français-Dantès_sur_son_rocher.jpg'),
+  ),
+  Book(
+    'Phantom of the Opera',
+    Uri.parse(
+        'https://upload.wikimedia.org/wikipedia/commons/7/76/André_Castaigne_Fantôme_Opéra1.jpg'),
+  ),
+  Book(
+    'Les Misérables',
+    Uri.parse(
+        'https://upload.wikimedia.org/wikipedia/commons/f/fd/Monsieur_Madeleine_par_Gustave_Brion.jpg'),
+  ),
+  Book(
+    'The Picture of Dorian Gray',
+    Uri.parse(
+        'https://upload.wikimedia.org/wikipedia/en/0/00/The_title_card_of_an_1891_print_of_The_Picture_of_Dorian_Gray%2C_by_Oscar_Wilde.png'),
+  ),
+];
+
 class MyApp extends StatelessWidget {
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // Try running your application with "flutter run". You'll see the
-        // application has a blue toolbar. Then, without quitting the app, try
-        // changing the primarySwatch below to Colors.green and then invoke
-        // "hot reload" (press "r" in the console where you ran "flutter run",
-        // or simply save your changes to "hot reload" in a Flutter IDE).
-        // Notice that the counter didn't reset back to zero; the application
-        // is not restarted.
         primarySwatch: Colors.blue,
       ),
       home: MyHomePage(title: 'Bookstore'),
@@ -27,16 +52,10 @@ class MyApp extends StatelessWidget {
 }
 
 class MyHomePage extends StatefulWidget {
-  MyHomePage({Key key, this.title}) : super(key: key);
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
+  MyHomePage({
+    Key key,
+    @required this.title,
+  }) : super(key: key);
 
   final String title;
 
@@ -50,7 +69,7 @@ class _MyHomePageState extends State<MyHomePage> {
     super.initState();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _showCards();
+      _showCards(2);
     });
   }
 
@@ -60,42 +79,29 @@ class _MyHomePageState extends State<MyHomePage> {
       appBar: AppBar(
         title: Text(widget.title),
       ),
-      body: MaterialButton(
-        child: Text('Open Cards'),
-        onPressed: () {
-          _showCards();
+      body: ListView.builder(
+        itemBuilder: (context, index) {
+          return InkWell(
+              child: BookRow(book: books[index]),
+              onTap: () {
+                _showCards(index);
+              });
         },
+        itemCount: books.length,
       ),
     );
   }
 
-  void _showCards() {
+  void _showCards(int initialPageIndex) {
     Navigator.of(context, rootNavigator: true).push(
       OverlayRoute(
         builder: (context) {
           return Container(
             child: PagedCards(
-              cardCount: 4,
-              initialPage: 1,
+              cardCount: books.length,
+              initialPage: initialPageIndex,
               builder: (context, index) {
-                final color = index % 2 == 0 ? Colors.red : Colors.blue;
-
-                return Scaffold(
-                  appBar: AppBar(
-                    title: Text('Card $index'),
-                    backgroundColor: Colors.green,
-                  ),
-                  body: ListView.builder(
-                    itemCount: 1000,
-                    itemBuilder: (context, index) {
-                      return Container(
-                        height: 30,
-                        color: color,
-                        child: Text('$index'),
-                      );
-                    },
-                  ),
-                );
+                return BookDetail(book: books[index]);
               },
             ),
           );
@@ -137,10 +143,86 @@ class OverlayRoute extends ModalRoute<void> {
     Animation<double> animation,
     Animation<double> secondaryAnimation,
   ) {
-    // return builder(context);
     return Material(
       type: MaterialType.transparency,
       child: builder(context),
+    );
+  }
+}
+
+class BookRow extends StatelessWidget {
+  BookRow({
+    Key key,
+    @required this.book,
+  }) : super(key: key);
+
+  final Book book;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 5),
+      child: Row(
+        children: <Widget>[
+          Container(
+            width: 80,
+            height: 80,
+            child: Image.network(book.url.toString()),
+          ),
+          Text(book.title, style: Theme.of(context).textTheme.headline),
+        ],
+      ),
+    );
+  }
+}
+
+class BookDetail extends StatelessWidget {
+  const BookDetail({
+    Key key,
+    @required this.book,
+  }) : super(key: key);
+
+  final Book book;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(book.title),
+        backgroundColor: Colors.red,
+      ),
+      body: Container(
+        color: Color.fromARGB(5, 0, 0, 0),
+        child: ListView.builder(
+          itemCount: 1000,
+          itemBuilder: (context, index) {
+            if (index == 0)
+              return AspectRatio(
+                // width: 80,
+                // height: 80,
+                aspectRatio: 0.75,
+                child: Image.network(
+                  book.url.toString(),
+                ),
+              );
+
+            if (index == 1)
+              return Padding(
+                padding: const EdgeInsets.all(10.0),
+                child: Center(
+                  child: Text(book.title,
+                      style: Theme.of(context).textTheme.headline),
+                ),
+              );
+
+            return Container(
+              height: 30,
+              // color: color,
+              child: Text('Filler Row #${index - 1}'),
+            );
+          },
+        ),
+      ),
     );
   }
 }

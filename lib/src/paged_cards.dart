@@ -1,9 +1,6 @@
-import 'dart:async';
-
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
-import 'package:paged_cards/paged_cards.dart';
 
 enum CardType {
   left,
@@ -76,11 +73,11 @@ class _PagedCardsState extends State<PagedCards> with TickerProviderStateMixin {
     //   }
     // });
 
-    Timer.periodic(Duration(milliseconds: 36), (d) {
-      setState(() {
-        // _centerCardProgress = (d.tick % 120 / 60).clamp(0.0, 1.0);
-      });
-    });
+    // Timer.periodic(Duration(milliseconds: 36), (d) {
+    //   setState(() {
+    //     // _centerCardProgress = (d.tick % 120 / 60).clamp(0.0, 1.0);
+    //   });
+    // });
   }
 
   Widget _renderCard(
@@ -91,71 +88,20 @@ class _PagedCardsState extends State<PagedCards> with TickerProviderStateMixin {
     final isCenteredCard = type == CardType.primary;
     final containerWidth = MediaQuery.of(context).size.width;
     final containerHeight = MediaQuery.of(context).size.height;
-    // final centeredCardWidthAfterScale = containerWidth *
-    //     (0.9 + 0.1 * _centerCardProgress * _centerCardProgress);
-
-    // positions
-    // double top = isCenteredCard
-    //     ? 50 * (1 - _centerCardProgress) + containerHeight * _dismissProgress
-    //     : 50;
-
-    // double singleSideLeftOver =
-    //     (containerWidth - centeredCardWidthAfterScale) / 2;
-
-    // print('singleSideLeftOver = $singleSideLeftOver');
-
-    // double left = isCenteredCard
-    //     ? 0
-    //     : (currentIndex < centeredIndex
-    //         ? (-containerWidth +
-    //             singleSideLeftOver +
-    //             singleSideLeftOver *
-    //                 (0.5 - _centerCardProgress * _centerCardProgress))
-    //         : containerWidth -
-    //             singleSideLeftOver -
-    //             singleSideLeftOver *
-    //                 (0.5 - _centerCardProgress * _centerCardProgress));
-
-    var left = 0.0;
-
-    //  (singleSideLeftOver / 4 +
-    //     (currentIndex - centeredIndex) * centeredCardWidthAfterScale);
-
-    // print(
-    //   'index = $currentIndex, left = $left, containerWidth = $containerWidth',
-    // );
-
-// Opacity
-
-    // return Positioned(
-    //   top: top,
-    //   left: left,
-    //   width: containerWidth,
-    //   height: MediaQuery.of(context).size.height,
-    //   // /   onPanDown: (_) {
-    //   //     print('pan down');
-    //   //   },
-    //   //   onPanUpdate: (x) {
-    //   //     print('pan move ${-x.globalPosition.dy + 50}');
-
-    //   //     reportOffset(-x.globalPosition.dy + 50);
-    //   //   },
-    //   child:
-
-// TODO:
-
-    final childCard = CardPage(
-      color: currentIndex % 2 == 0 ? Colors.red : Colors.blue,
-      isPrimaryCard: isCenteredCard,
-      onScroll: (offset) {
-        setState(() {
-          // _currentCardOffset = offset;
-          // print('_currentCardOffset = $_currentCardOffset');
-        });
-      },
-      builder: (context) => widget.builder(context, currentIndex),
-      // current
+// MediaQuery.
+// MediaQuery.of(context).size
+    Widget childCard = MediaQuery.removePadding(
+      context: context,
+      // removeTop: true,
+      removeBottom: true,
+      child: Container(
+        color: Colors.blue,
+        height: 1000,
+        child: widget.builder(context, currentIndex),
+      ),
     );
+    // final childCard =
+    //     Container(height: 10000, child: widget.builder(context, currentIndex));
 
     return AnimatedBuilder(
       key: Key('$currentIndex'),
@@ -166,7 +112,8 @@ class _PagedCardsState extends State<PagedCards> with TickerProviderStateMixin {
 
         final animationValue = _primarySnapAnimationController.value;
 
-        final primaryCardSnapProgress = animationValue > 0 ? animationValue : 0;
+        final primaryCardSnapProgress =
+            animationValue > 0 ? animationValue : 0.0;
         final neighborCardPaddingFactor = (1 -
             primaryCardSnapProgress *
                 primaryCardSnapProgress *
@@ -183,7 +130,7 @@ class _PagedCardsState extends State<PagedCards> with TickerProviderStateMixin {
                   _primaryPageIndex);
               final dx =
                   (nextPage >= 0 ? -nextPage : (-nextPage)) * containerWidth;
-              print('nextPage = $nextPage; dx = $dx');
+              // print('nextPage = $nextPage; dx = $dx');
 
               return Transform.translate(
                 offset: isCenteredCard
@@ -205,11 +152,11 @@ class _PagedCardsState extends State<PagedCards> with TickerProviderStateMixin {
                             dismissDistance,
                           ),
                 child: Transform.scale(
-                  // scale: 0.8,
-                  scale: 0.9 +
-                      (isCenteredCard
-                          ? (0.1 * (1 - neighborCardPaddingFactor))
-                          : 0),
+                  scale: 1,
+                  // scale: 0.9 +
+                  //     (isCenteredCard
+                  //         ? (0.1 * (1 - neighborCardPaddingFactor))
+                  //         : 0),
                   // origin: Offset(-1, 0),
                   child: GestureDetector(
                     dragStartBehavior: DragStartBehavior.down,
@@ -237,9 +184,9 @@ class _PagedCardsState extends State<PagedCards> with TickerProviderStateMixin {
                       _currentPageIndexAnimationController.value =
                           _primaryPageIndex - dx / width;
 
-                      print(
-                        'horizontal drag! page = ${_currentPageIndexAnimationController.value}',
-                      );
+                      // print(
+                      //   'horizontal drag! page = ${_currentPageIndexAnimationController.value}',
+                      // );
                     },
                     onHorizontalDragEnd: (_) {
                       final nextPage = _currentPageIndexAnimationController
@@ -249,6 +196,7 @@ class _PagedCardsState extends State<PagedCards> with TickerProviderStateMixin {
                       _currentPageIndexAnimationController
                           .animateTo(nextPage.toDouble(),
                               duration: Duration(milliseconds: 100))
+                          .orCancel
                           .then((_) {
                         setState(() {
                           _primaryPageIndex = nextPage;
@@ -262,8 +210,8 @@ class _PagedCardsState extends State<PagedCards> with TickerProviderStateMixin {
                             final height = MediaQuery.of(context).size.height;
                             // final top2 = MediaQuery.of(context).viewInsets.top;
 
-                            print(
-                                'safeAreaTop = $safeAreaTop, _panDownY = $_panDownY ');
+                            // print(
+                            //     'safeAreaTop = $safeAreaTop, _panDownY = $_panDownY ');
 
                             //  + safeAreaTop
 
@@ -288,9 +236,9 @@ class _PagedCardsState extends State<PagedCards> with TickerProviderStateMixin {
                               final totalDistanceTilSnap =
                                   _panDownY - safeAreaTop;
 
-                              print(
-                                'dYInDirection = $dYInSnapDirection, totalDistanceTilSnap = $totalDistanceTilSnap',
-                              );
+                              // print(
+                              //   'dYInDirection = $dYInSnapDirection, totalDistanceTilSnap = $totalDistanceTilSnap',
+                              // );
 
                               _primarySnapAnimationController.value =
                                   (dYInSnapDirection / totalDistanceTilSnap)
@@ -308,9 +256,9 @@ class _PagedCardsState extends State<PagedCards> with TickerProviderStateMixin {
                     onVerticalDragEnd: (details) {
                       final animationValue =
                           _primarySnapAnimationController.value;
-                      print(
-                        'END = ${details.primaryVelocity}, animationValue = $animationValue',
-                      );
+                      // print(
+                      //   'END = ${details.primaryVelocity}, animationValue = $animationValue',
+                      // );
 
                       /* TODO: take velocity into account */
                       if (animationValue > 0.5) {
@@ -321,9 +269,10 @@ class _PagedCardsState extends State<PagedCards> with TickerProviderStateMixin {
                       } else if (animationValue < -0.5) {
                         _primarySnapAnimationController
                             .animateTo(
-                          -1,
-                          duration: Duration(milliseconds: 200),
-                        )
+                              -1,
+                              duration: Duration(milliseconds: 200),
+                            )
+                            .orCancel
                             .then((_) {
                           Navigator.of(context).pop();
                         });
@@ -339,7 +288,39 @@ class _PagedCardsState extends State<PagedCards> with TickerProviderStateMixin {
 
                       // }
                     },
-                    child: child,
+                    child: Padding(
+                      padding: EdgeInsets.only(
+                        left: isCenteredCard
+                            ? containerWidth *
+                                0.05 *
+                                (1 - primaryCardSnapProgress)
+                            : containerWidth * 0.05,
+                        top: isCenteredCard
+                            ? 50 * (1 - primaryCardSnapProgress)
+                            : 50,
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.only(
+                          topLeft: Radius.circular(
+                            isCenteredCard
+                                ? 10.0 * (1 - primaryCardSnapProgress)
+                                : 10.0,
+                          ),
+                          topRight: Radius.circular(
+                            isCenteredCard
+                                ? 10.0 * (1 - primaryCardSnapProgress)
+                                : 10.0,
+                          ),
+                        ),
+                        child: Container(
+                          child: child,
+                          width: isCenteredCard
+                              ? containerWidth *
+                                  (0.9 + 0.1 * primaryCardSnapProgress)
+                              : containerWidth * 0.9,
+                        ),
+                      ),
+                    ),
                   ),
                   // ),
                 ),
@@ -516,98 +497,7 @@ class _PagedCardsState extends State<PagedCards> with TickerProviderStateMixin {
         type: CardType.primary,
         // centeredIndex: selectedIndex,
       ),
-
-      // Positioned(
-      //   top: 50,
-      //   left: -(MediaQuery.of(context).size.width - 100) + 40,
-      //   width: MediaQuery.of(context).size.width - 100,
-      //   height: MediaQuery.of(context).size.height,
-      //   child: CardPage(
-      //     color: 0 % 2 == 0 ? Colors.red : Colors.blue,
-      //     isPrimaryCard: index == _activePage,
-      //     onScroll: (offset) {
-      //       setState(() {
-      //         _currentCardOffset = offset;
-      //         print('_currentCardOffset = $_currentCardOffset');
-      //       });
-      //     },
-      //     builder: (context) => widget.builder(context, 0),
-      //     // current
-      //   ),
-      // ),
-
-      // Positioned(
-      //   top: 50,
-      //   left: MediaQuery.of(context).size.width - 50,
-      //   width: MediaQuery.of(context).size.width - 100,
-      //   height: MediaQuery.of(context).size.height,
-      //   // right: -100,
-      //   // bottom: 0,
-      //   child: CardPage(
-      //     color: 2 % 2 == 0 ? Colors.red : Colors.blue,
-      //     isPrimaryCard: index == _activePage,
-      //     onScroll: (offset) {
-      //       setState(() {
-      //         _currentCardOffset = offset;
-      //         print('_currentCardOffset = $_currentCardOffset');
-      //       });
-      //     },
-      //     builder: (context) => widget.builder(context, 2),
-      //     // current
-      //   ),
-      // )
     ]);
-
-    // controller.viewportFraction = 1;
-    // TODO: ListView.custom ?
-    // FixedExtentScrollPhysics
-    // https://stackoverflow.com/questions/47349784/creating-image-carousel-in-flutter
-    // return Transform.scale(
-    //     scale: 0.9 + (_currentCardOffset / 25) * 0.25,
-    //     child: PageView.builder(
-    //       physics: const PageScrollPhysics(),
-
-    //       controller: controller,
-
-    //       // itemExtent: 370,
-    //       itemBuilder: (context, index) {
-    //         return Container(
-    //           // width: 360,
-    //           child: CardPage(
-    //             color: index % 2 == 0 ? Colors.red : Colors.blue,
-    //             isPrimaryCard: index == _activePage,
-    //             onScroll: (offset) {
-    //               setState(() {
-    //                 _currentCardOffset = offset;
-    //                 print('_currentCardOffset = $_currentCardOffset');
-    //               });
-    //             },
-    //             // current
-    //           ),
-    //           height: 1000,
-    //         );
-    //       },
-    //       itemCount: widget.cards.length,
-    //       scrollDirection: Axis.horizontal,
-    //     ));
-
-    // return PageView.builder(
-    //   controller: controller,
-    //   itemBuilder: (context, index) {
-    //     return Container(
-    //       color: Colors.green,
-    //       child: Padding(
-    //         padding: const EdgeInsets.all(8.0),
-    //         child: CardPage(
-    //           color: index % 2 == 0 ? Colors.red : Colors.blue,
-    //           isPrimaryCard: index == _activePage,
-    //           // current
-    //         ),
-    //       ),
-    //     );
-    //   },
-    //   itemCount: widget.cards.length,
-    // );
   }
 
   @override
@@ -616,6 +506,7 @@ class _PagedCardsState extends State<PagedCards> with TickerProviderStateMixin {
 
     // _primaryDismissAnimationController.dispose();
     _primarySnapAnimationController.dispose();
+    _currentPageIndexAnimationController.dispose();
 
     // controller.dispose();
   }
