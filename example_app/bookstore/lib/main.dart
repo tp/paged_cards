@@ -76,6 +76,7 @@ class _MyHomePageState extends State<MyHomePage> {
           return Container(
             child: PagedCards(
               cardCount: 4,
+              initialPage: 1,
               builder: (context, index) {
                 final color = index % 2 == 0 ? Colors.red : Colors.blue;
 
