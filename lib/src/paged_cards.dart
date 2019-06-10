@@ -1,6 +1,8 @@
 import 'dart:async';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:paged_cards/paged_cards.dart';
 
@@ -22,12 +24,18 @@ class PagedCards extends StatefulWidget {
 
 class _PagedCardsState extends State<PagedCards> {
   final PageController controller = PageController(
-    viewportFraction: 0.9,
+    // viewportFraction: 0.9,
+    initialPage: 1,
   );
 
   /// The vertical progress of the primary, centered card.
   /// Ranges from 0 (show smaller inline) to 1 (taking up the whole screen unscaled).
   double _centerCardProgress = 0;
+
+  double _panDownY = 0;
+
+  /// 0 - 1
+  double _dismissProgress = 0;
 
   @override
   initState() {
@@ -66,11 +74,14 @@ class _PagedCardsState extends State<PagedCards> {
   }) {
     final isCenteredCard = currentIndex == centeredIndex;
     final containerWidth = MediaQuery.of(context).size.width;
+    final containerHeight = MediaQuery.of(context).size.height;
     final centeredCardWidthAfterScale = containerWidth *
         (0.9 + 0.1 * _centerCardProgress * _centerCardProgress);
 
     // positions
-    double top = isCenteredCard ? 50 * (1 - _centerCardProgress) : 50;
+    double top = isCenteredCard
+        ? 50 * (1 - _centerCardProgress) + containerHeight * _dismissProgress
+        : 50;
 
     double singleSideLeftOver =
         (containerWidth - centeredCardWidthAfterScale) / 2;
@@ -96,55 +107,103 @@ class _PagedCardsState extends State<PagedCards> {
     //   'index = $currentIndex, left = $left, containerWidth = $containerWidth',
     // );
 
-    return Positioned(
-      top: top,
-      left: left,
-      width: containerWidth,
-      height: MediaQuery.of(context).size.height,
-      // /   onPanDown: (_) {
-      //     print('pan down');
-      //   },
-      //   onPanUpdate: (x) {
-      //     print('pan move ${-x.globalPosition.dy + 50}');
+// Opacity
 
-      //     reportOffset(-x.globalPosition.dy + 50);
-      //   },
-      child: Container(
-        // color: Colors.red,
-        child: Transform.scale(
-          // scale: 0.8,
-          scale: 0.9 +
-              (isCenteredCard
-                  ? (0.1 * _centerCardProgress * _centerCardProgress)
-                  : 0),
-          // origin: Offset(-1, 0),
-          child: GestureDetector(
-            onPanDown: isCenteredCard
-                ? (_) {
-                    //     print('pan down');
-                  }
-                : null,
-            onPanUpdate: isCenteredCard
-                ? (x) {
-                    print('pan move ${-x.globalPosition.dy + 50}');
+    // return Positioned(
+    //   top: top,
+    //   left: left,
+    //   width: containerWidth,
+    //   height: MediaQuery.of(context).size.height,
+    //   // /   onPanDown: (_) {
+    //   //     print('pan down');
+    //   //   },
+    //   //   onPanUpdate: (x) {
+    //   //     print('pan move ${-x.globalPosition.dy + 50}');
 
-                    //     reportOffset(-x.globalPosition.dy + 50);
+    //   //     reportOffset(-x.globalPosition.dy + 50);
+    //   //   },
+    //   child:
+    return Container(
+      // color: Colors.red,
+      child: Transform.scale(
+        // scale: 0.8,
+        scale: 0.9 +
+            (isCenteredCard
+                ? (0.1 * _centerCardProgress * _centerCardProgress)
+                : 0),
+        // origin: Offset(-1, 0),
+        child: GestureDetector(
+          dragStartBehavior: DragStartBehavior.down,
+          onVerticalDragDown: isCenteredCard
+              ? (details) {
+                  //     print('pan down');
+                  _panDownY = details.globalPosition.dy;
+                }
+              : null,
+          onVerticalDragUpdate: isCenteredCard
+              ? (x) {
+                  final safeAreaTop = MediaQuery.of(context).padding.top;
+                  // final top2 = MediaQuery.of(context).viewInsets.top;
+
+                  print('safeAreaTop = $safeAreaTop, _panDownY = $_panDownY ');
+
+                  //  + safeAreaTop
+
+                  if (x.globalPosition.dy > _panDownY) {
+                    final dYInDismissDirection =
+                        x.globalPosition.dy - _panDownY;
+                    setState(() {
+                      _centerCardProgress = 0;
+                      _dismissProgress =
+                          (dYInDismissDirection / 200).clamp(0.0, 1.0);
+                    });
+                  } else {
+                    final dYInSnapDirection = _panDownY - x.globalPosition.dy;
+                    final totalDistanceTilSnap = _panDownY - safeAreaTop;
+
+                    print(
+                      'dYInDirection = $dYInSnapDirection, totalDistanceTilSnap = $totalDistanceTilSnap',
+                    );
+
+                    setState(() {
+                      _dismissProgress = 0;
+                      _centerCardProgress =
+                          (dYInSnapDirection / totalDistanceTilSnap)
+                              .clamp(0.0, 1.0);
+                    });
                   }
-                : null,
-            child: CardPage(
-              color: currentIndex % 2 == 0 ? Colors.red : Colors.blue,
-              isPrimaryCard: isCenteredCard,
-              onScroll: (offset) {
-                setState(() {
-                  _currentCardOffset = offset;
-                  print('_currentCardOffset = $_currentCardOffset');
-                });
-              },
-              builder: (context) => widget.builder(context, currentIndex),
-              // current
-            ),
+
+                  // final p = (_panDownY - x.globalPosition.dy).clamp(0, 0);
+                  // print('pan move ${p}');
+
+                  // print('pan mov 1e ${}');
+
+                  //     reportOffset(-x.globalPosition.dy + 50);
+                }
+              : null,
+          onVerticalDragEnd: (details) {
+            print('END = ${details.primaryVelocity}');
+
+            if (details.primaryVelocity > 0) {
+              // downwards
+
+              Navigator.of(context).pop();
+            }
+          },
+          child: CardPage(
+            color: currentIndex % 2 == 0 ? Colors.red : Colors.blue,
+            isPrimaryCard: isCenteredCard,
+            onScroll: (offset) {
+              setState(() {
+                _currentCardOffset = offset;
+                print('_currentCardOffset = $_currentCardOffset');
+              });
+            },
+            builder: (context) => widget.builder(context, currentIndex),
+            // current
           ),
         ),
+        // ),
       ),
     );
   }
@@ -155,7 +214,97 @@ class _PagedCardsState extends State<PagedCards> {
 
     final selectedIndex = 1;
 
+    final containerWidth = MediaQuery.of(context).size.width;
+    // final centeredCardWidthAfterScale = containerWidth *
+    //     (0.9 + 0.1 * _centerCardProgress * _centerCardProgress);
+
+    return CustomScrollView(
+      scrollDirection: Axis.horizontal,
+      controller: controller,
+      // physics: PageScrollPhysics(),
+      slivers: <Widget>[
+        SliverList(
+          delegate: SliverChildBuilderDelegate(
+            (context, index) {
+              final scaleFactor = index == 1
+                  ? (0.9 + 0.1 * _centerCardProgress * _centerCardProgress)
+                  : 0.9;
+
+              return Transform.translate(
+                offset: index == 2 ? Offset(-100, 0) : Offset(0, 0),
+                child: Container(
+                  color: index % 2 == 0 ? Colors.yellow : Colors.lightBlue,
+                  width: containerWidth * scaleFactor,
+                  child: Transform.scale(
+                    scale: scaleFactor,
+                    child: Container(
+                      color: index % 2 == 0 ? Colors.yellow : Colors.lightBlue,
+                      width: containerWidth, // * 0.9,
+                      // _renderCard(context, currentIndex: 0, centeredIndex: selectedIndex),
+                      height: 10,
+                      child: _renderCard(context,
+                          currentIndex: index, centeredIndex: selectedIndex),
+                    ),
+                  ),
+                ),
+              );
+            },
+            childCount: 10,
+          ),
+        ),
+      ],
+    );
+
+    return Scrollable(
+      // dragStartBehavior: DragStartBehavior.down,
+      axisDirection: AxisDirection.right,
+      controller: controller,
+      physics: PageScrollPhysics(),
+      viewportBuilder: (BuildContext context, ViewportOffset position) {
+        position.addListener(() {
+          print('position changed, ${position.pixels}');
+        });
+
+        return Container(
+          color: Colors.red,
+          child: Text('${position.pixels}'),
+        );
+      },
+    );
+
+    // SingleChildScrollView
+    // ListView
+    // BoxScrollView
+
+    // return CustomScrollView(
+    //   slivers: <Widget>[
+    //     Container(
+    //       color: Colors.red,
+    //       child: Text('${1}'),
+    //     )
+    //   ],
+    // );
+
     return Stack(children: [
+      // PageView.builder(
+      //   controller: controller,
+      //   itemBuilder: (context, index) {
+      //     return Container(
+      //       color: Colors.transparent,
+      //       // color: index % 2 == 0 ? Colors.yellow : Colors.lightBlue,
+      //       // child: SizedBox.shrink(),
+      //       //   child: Padding(
+      //       //     padding: const EdgeInsets.all(8.0),
+      //       //     child: CardPage(
+      //       //       color: index % 2 == 0 ? Colors.red : Colors.blue,
+      //       //       isPrimaryCard: index == _activePage,
+      //       //       // current
+      //       //     ),
+      //       //   ),
+      //     );
+      //   },
+      //   itemCount: 2, // widget.cards.length,
+      // ),
       _renderCard(context, currentIndex: 0, centeredIndex: selectedIndex),
       _renderCard(context, currentIndex: 2, centeredIndex: selectedIndex),
       _renderCard(context, currentIndex: 1, centeredIndex: selectedIndex),
