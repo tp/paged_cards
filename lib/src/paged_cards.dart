@@ -218,32 +218,78 @@ class _PagedCardsState extends State<PagedCards> {
     // final centeredCardWidthAfterScale = containerWidth *
     //     (0.9 + 0.1 * _centerCardProgress * _centerCardProgress);
 
+    // return ListView.builder(
+    //   scrollDirection: Axis.horizontal,
+    //   controller: controller,
+    //   physics: PageScrollPhysics(),
+    //   itemBuilder: (context, index) {
+    //     print('BUILDING $index');
+
+    //     final scaleFactor = index == 1
+    //         ? (0.9 + 0.1 * _centerCardProgress * _centerCardProgress)
+    //         : 0.9;
+
+    //     return Transform.translate(
+    //       // offset: Offset(0, 0),
+    //       offset: index == 2 ? Offset(-100, 0) : Offset(0, 0),
+    //       child: Container(
+    //         color: index % 2 == 0 ? Colors.yellow : Colors.lightBlue,
+    //         width: containerWidth,
+    //         child: Transform.scale(
+    //           scale: scaleFactor,
+    //           child: Container(
+    //             color: index % 2 == 0 ? Colors.yellow : Colors.lightBlue,
+    //             width: containerWidth, // * 0.9,
+    //             // _renderCard(context, currentIndex: 0, centeredIndex: selectedIndex),
+    //             height: 10,
+    //             child: _renderCard(context,
+    //                 currentIndex: index, centeredIndex: selectedIndex),
+    //           ),
+    //         ),
+    //       ),
+    //     );
+    //   },
+    //   itemCount: 10,
+    //   cacheExtent: 1,
+    // );
+
     return CustomScrollView(
       scrollDirection: Axis.horizontal,
       controller: controller,
-      // physics: PageScrollPhysics(),
+      physics: PageScrollPhysics(),
+       cacheExtent: 1000,
       slivers: <Widget>[
+
         SliverList(
           delegate: SliverChildBuilderDelegate(
             (context, index) {
+              print('BUILDING $index');
+
               final scaleFactor = index == 1
                   ? (0.9 + 0.1 * _centerCardProgress * _centerCardProgress)
                   : 0.9;
 
               return Transform.translate(
-                offset: index == 2 ? Offset(-100, 0) : Offset(0, 0),
+                // offset: Offset(0, 0),
+                offset: index == 0
+                    ? Offset(100, 0)
+                    : (index == 2 ? Offset(-100, 0) : Offset(0, 0)),
                 child: Container(
-                  color: index % 2 == 0 ? Colors.yellow : Colors.lightBlue,
-                  width: containerWidth * scaleFactor,
+                  // color: index % 2 == 0 ? Colors.yellow : Colors.lightBlue,
+                  width: containerWidth - 0.5,
                   child: Transform.scale(
                     scale: scaleFactor,
                     child: Container(
-                      color: index % 2 == 0 ? Colors.yellow : Colors.lightBlue,
+                      color:
+                          index % 2 == 0 ? Colors.yellow : Colors.transparent,
                       width: containerWidth, // * 0.9,
                       // _renderCard(context, currentIndex: 0, centeredIndex: selectedIndex),
                       height: 10,
-                      child: _renderCard(context,
-                          currentIndex: index, centeredIndex: selectedIndex),
+                      child: _renderCard(
+                        context,
+                        currentIndex: index,
+                        centeredIndex: selectedIndex,
+                      ),
                     ),
                   ),
                 ),
